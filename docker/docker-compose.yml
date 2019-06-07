@@ -1,0 +1,56 @@
+version: '3'
+
+services:
+  supla-cloud:
+    container_name: ${COMPOSE_PROJECT_NAME}-cloud
+    restart: unless-stopped
+    image: supla/supla-cloud
+    env_file:
+      - .env.default
+      - .env
+    volumes:
+      - ./ssl/cloud:/etc/apache2/ssl:z
+      - ${VOLUME_DATA}/cloud-local:/var/www/cloud/var/local
+      - ${VOLUME_DATA}/cloud-logs:/var/www/cloud/var/logs
+      - supla-server-socket:/supla-server:z
+    links:
+      - supla-db
+    depends_on:
+      - supla-db
+
+  supla-db:
+    container_name: ${COMPOSE_PROJECT_NAME}-db
+    restart: unless-stopped
+    image: mysql:5.7.20
+    env_file:
+      - .env.default
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: supla
+      MYSQL_USER: supla
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ${VOLUME_DATA}/mysql:/var/lib/mysql:z
+
+  supla-server:
+    container_name: ${COMPOSE_PROJECT_NAME}-server
+    restart: unless-stopped
+    image: supla-server-karol
+    env_file:
+      - .env.default
+      - .env
+    volumes:
+      - ./ssl/server:/etc/supla-server/ssl:z
+      - supla-server-socket:/var/run/supla:z
+      - ${VOLUME_DATA}/server-logs:/var/log/supla
+    ports:
+      - "2016:2016"
+      - "2015:2015"
+    links:
+      - supla-db
+    depends_on:
+      - supla-cloud
+
+volumes:
+  supla-server-socket: {}
